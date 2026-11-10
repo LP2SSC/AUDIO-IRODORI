@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IRODORI Audio Player</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --starter: #f59e0b;
+      --elem1: #8b5cf6;
+      --elem2: #ec4899;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 10px 12px 8px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      z-index: 10;
+    }
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    h1 { font-size: 1.1rem; }
+    .btn-settings {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-settings.edit {
+      background: #1e3a2f;
+      border-color: #2d6a4f;
+      color: #6ee7b7;
+    }
+    .subtitle { color: var(--muted); font-size: 0.72rem; margin-bottom: 8px; }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      background: var(--card);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .tab.active { color: #fff; }
+    .tab.starter.active { background: var(--starter); border-color: var(--starter); }
+    .tab.elem1.active { background: var(--elem1); border-color: var(--elem1); }
+    .tab.elem2.active { background: var(--elem2); border-color: var(--elem2); }
+
+    .lessons-wrap {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .lessons-wrap::-webkit-scrollbar { height: 0; }
+    .lesson-btn {
+      flex-shrink: 0;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .lesson-btn.active { color: #fff; }
+    .starter .lesson-btn.active { background: var(--starter); border-color: var(--starter); }
+    .elem1 .lesson-btn.active { background: var(--elem1); border-color: var(--elem1); }
+    .elem2 .lesson-btn.active { background: var(--elem2); border-color: var(--elem2); }
+
+    .list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px 40px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .heading {
+      margin: 12px 0 6px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .heading.h1 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .heading.h2 {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .heading-text { flex: 1; }
+    .heading .color-dot {
+      display: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.6);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    body.edit-mode .heading .color-dot { display: block; }
+    .heading .del-btn {
+      display: none;
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    body.edit-mode .heading .del-btn { display: flex; }
+
+    .track {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: var(--card);
+    }
+    .track-name {
+      font-size: 0.88rem;
+      margin-bottom: 6px;
+      word-break: break-all;
+      font-weight: 500;
+    }
+    audio {
+      width: 100%;
+      height: 34px;
+      border-radius: 8px;
+    }
+
+    .insert-row {
+      display: none;
+      gap: 6px;
+      margin: 4px 0 8px;
+      justify-content: center;
+    }
+    body.edit-mode .insert-row { display: flex; }
+    .insert-btn {
+      flex: 1;
+      padding: 7px 4px;
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .insert-btn:active { background: var(--card); }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+      font-size: 0.9rem;
+    }
+
+    .settings-bar {
+      display: none;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    body.edit-mode .settings-bar { display: flex; }
+    .settings-bar button {
+      flex: 1;
+      min-width: 90px;
+      padding: 8px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .settings-bar button:active { opacity: 0.8; }
+    .settings-bar .btn-export { border-color: #3b82f6; color: #93c5fd; }
+    .settings-bar .btn-import { border-color: #10b981; color: #6ee7b7; }
+    .settings-bar .btn-reset { border-color: var(--danger); color: #fca5a5; }
+
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 16px 16px 0 0;
+      width: 100%;
+      max-width: 500px;
+      padding: 20px 16px 30px;
+      border-top: 1px solid var(--border);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal h3 { font-size: 1rem; margin-bottom: 12px; }
+    .modal label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .modal select, .modal input, .modal textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      font-family: inherit;
+    }
+    .modal textarea {
+      min-height: 120px;
+      font-size: 0.8rem;
+      resize: vertical;
+    }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn-cancel { background: var(--border); color: var(--text); }
+    .btn-ok { background: #3b82f6; color: #fff; }
+    .btn-ok.green { background: #10b981; }
+
+    .color-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .swatch {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .swatch.selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px #3b82f6;
+    }
+    .custom-color-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .custom-color-row input[type="color"] {
+      width: 52px;
+      height: 42px;
+      padding: 2px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .custom-color-row .preview {
+      flex: 1;
+      height: 42px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-row">
+      <h1>IRODORI Audio Player</h1>
+      <button class="btn-settings" id="btnSettings" onclick="toggleEdit()">⚙ Pengaturan</button>
+    </div>
+    <p class="subtitle" id="modeLabel">Mode: Ngajar (baca saja)</p>
+    <div class="tabs">
+      <button class="tab starter active" onclick="setLevel('starter')">Starter</button>
+      <button class="tab elem1" onclick="setLevel('elem1')">Elem 1</button>
+      <button class="tab elem2" onclick="setLevel('elem2')">Elem 2</button>
+    </div>
+    <div id="lessons" class="lessons-wrap starter"></div>
+
+    <div class="settings-bar">
+      <button class="btn-export" onclick="exportJSON()">⬆ Export</button>
+      <button class="btn-import" onclick="openImport()">⬇ Import</button>
+      <button class="btn-reset" onclick="resetCurrent()">🗑 Reset</button>
+    </div>
+  </header>
+
+  <div class="list" id="list">
+    <div class="empty">Memuat...</div>
+  </div>
+
+  <!-- Modal Heading -->
+  <div class="modal-bg" id="modal">
+    <div class="modal">
+      <h3>Tambah Judul</h3>
+      <label>Tipe</label>
+      <select id="hType">
+        <option value="h1">Heading 1 (besar)</option>
+        <option value="h2">Heading 2 (kecil)</option>
+      </select>
+      <label>Teks judul</label>
+      <input type="text" id="hText" placeholder="Contoh: Bagian Kiku / Hanasu..." />
+      <label>Warna section</label>
+      <div class="color-swatches" id="headingSwatches"></div>
+      <div class="custom-color-row">
+        <input type="color" id="hColorCustom" value="#334155" oninput="onCustomColor('heading')" />
+        <div class="preview" id="hColorPreview">Custom</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Batal</button>
+        <button class="btn-ok" onclick="confirmHeading()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal warna section -->
+  <div class="modal-bg" id="modalSectionColor">
+    <div class="modal">
+      <h3>Warna Section</h3>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;" id="sectionColorLabel"></p>
+      <label>Pilih template</label>
+      <div class="color-swatches" id="sectionSwatches"></div>
+      <label>Atau custom sendiri</label>
+      <div class="custom-color-row">
+        <input type="color" id="sectionColorCustom" value="#334155" oninput="onCustomColor('section')" />
+        <div class="preview" id="sectionColorPreview">Custom</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeSectionColor()">Batal</button>
+        <button class="btn-ok" onclick="saveSectionColor()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import -->
+  <div class="modal-bg" id="modalImport">
+    <div class="modal">
+      <h3>Import JSON</h3>
+      <label>Tempel isi file JSON di sini</label>
+      <textarea id="importText" placeholder='{"starter_01": [...], ...}'></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeImport()">Batal</button>
+        <button class="btn-ok green" onclick="doImport()">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+const AUDIO_DATA = {
+  "starter_00": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/00/X_[00-01]_kyoshitsu1.mp3", name: "X_[00-01]_kyoshitsu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/00/X_[00-02]_kyoshitsu2.mp3", name: "X_[00-02]_kyoshitsu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/00/X_[00-03]_kyoshitsu3.mp3", name: "X_[00-03]_kyoshitsu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/00/X_[00-04]_kyoshitsu4.mp3", name: "X_[00-04]_kyoshitsu4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/00/X_[00-05]_kyoshitsu5.mp3", name: "X_[00-05]_kyoshitsu5.mp3"},
+  ],
+  "starter_01": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-01]_kiku.mp3", name: "X_[01-01]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-02]_kiku1.mp3", name: "X_[01-02]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-03]_kiku2.mp3", name: "X_[01-03]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-04]_kiku3.mp3", name: "X_[01-04]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-05]_kiku4.mp3", name: "X_[01-05]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-06]_hanasu1-1.mp3", name: "X_[01-06]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-07]_hanasu1-2.mp3", name: "X_[01-07]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-08]_hanasu2.mp3", name: "X_[01-08]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-09]_hanasu3.mp3", name: "X_[01-09]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-10]_kiku1.mp3", name: "X_[01-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-11]_kiku2.mp3", name: "X_[01-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-12]_kiku3.mp3", name: "X_[01-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-13]_kiku4.mp3", name: "X_[01-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-14]_hanasu1-1.mp3", name: "X_[01-14]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-15]_hanasu1-2.mp3", name: "X_[01-15]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-16]_hanasu2.mp3", name: "X_[01-16]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-17]_hanasu3.mp3", name: "X_[01-17]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-18]_kiku1.mp3", name: "X_[01-18]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-19]_kiku2.mp3", name: "X_[01-19]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-20]_kiku3.mp3", name: "X_[01-20]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-21]_kiku4.mp3", name: "X_[01-21]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-22]_kiku5.mp3", name: "X_[01-22]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-23]_kiku6.mp3", name: "X_[01-23]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-24]_kiku7.mp3", name: "X_[01-24]_kiku7.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-25]_kiku8.mp3", name: "X_[01-25]_kiku8.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-26]_hanasu1-1.mp3", name: "X_[01-26]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-27]_hanasu1-2.mp3", name: "X_[01-27]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-28]_hanasu1-3.mp3", name: "X_[01-28]_hanasu1-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-29]_hanasu2.mp3", name: "X_[01-29]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-30]_hiragana1.mp3", name: "X_[01-30]_hiragana1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-31]_hiragana2.mp3", name: "X_[01-31]_hiragana2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-32]_hiragana3.mp3", name: "X_[01-32]_hiragana3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-33]_hiragana4.mp3", name: "X_[01-33]_hiragana4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-34]_hiragana_nobasu.mp3", name: "X_[01-34]_hiragana_nobasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/01/X_[01-35]_hiragana_tsumaru.mp3", name: "X_[01-35]_hiragana_tsumaru.mp3"},
+  ],
+  "starter_02": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-01]_kiku1.mp3", name: "X_[02-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-02]_kiku2.mp3", name: "X_[02-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-03]_kiku3.mp3", name: "X_[02-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-04]_kiku_number.mp3", name: "X_[02-04]_kiku_number.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-05]_hanasu1.mp3", name: "X_[02-05]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-06]_hanasu2.mp3", name: "X_[02-06]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-07]_kiku1.mp3", name: "X_[02-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-08]_kiku2.mp3", name: "X_[02-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-09]_kiku3.mp3", name: "X_[02-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-10]_kiku4.mp3", name: "X_[02-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-11]_hanasu1-1.mp3", name: "X_[02-11]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-12]_hanasu1-2.mp3", name: "X_[02-12]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-13]_hanasu2-1.mp3", name: "X_[02-13]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-14]_hanasu2-2.mp3", name: "X_[02-14]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-15]_kiku0-1.mp3", name: "X_[02-15]_kiku0-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-16]_kiku0-2.mp3", name: "X_[02-16]_kiku0-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-17]_kiku1.mp3", name: "X_[02-17]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-18]_kiku2.mp3", name: "X_[02-18]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-19]_kiku3.mp3", name: "X_[02-19]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-20]_kiku4.mp3", name: "X_[02-20]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-21]_hanasu1.mp3", name: "X_[02-21]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-22]_hanasu2.mp3", name: "X_[02-22]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-23]_hanasu3.mp3", name: "X_[02-23]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-24]_katakana1.mp3", name: "X_[02-24]_katakana1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-25]_katakana2.mp3", name: "X_[02-25]_katakana2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-26]_katakana3.mp3", name: "X_[02-26]_katakana3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-27]_katakana4.mp3", name: "X_[02-27]_katakana4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-28]_katakana5.mp3", name: "X_[02-28]_katakana5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-29]_katakana_nobasu.mp3", name: "X_[02-29]_katakana_nobasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/02/X_[02-30]_katakana_tsumaru.mp3", name: "X_[02-30]_katakana_tsumaru.mp3"},
+  ],
+  "starter_03": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-01]_kiku1.mp3", name: "X_[03-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-02]_kiku2.mp3", name: "X_[03-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-03]_kiku3.mp3", name: "X_[03-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-04]_kiku4.mp3", name: "X_[03-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-05]_katachi.mp3", name: "X_[03-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-06]_hanasu.mp3", name: "X_[03-06]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-07]_kaiwa.mp3", name: "X_[03-07]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-08]_katachi1.mp3", name: "X_[03-08]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-09]_katachi2.mp3", name: "X_[03-09]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-10]_katachi3.mp3", name: "X_[03-10]_katachi3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/03/X_[03-11]_hanasu.mp3", name: "X_[03-11]_hanasu.mp3"},
+  ],
+  "starter_04": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-01]_kotoba1.mp3", name: "X_[04-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-02]_kotoba2.mp3", name: "X_[04-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-03]_kiku1.mp3", name: "X_[04-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-04]_kiku2.mp3", name: "X_[04-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-05]_kiku3.mp3", name: "X_[04-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-06]_kiku4.mp3", name: "X_[04-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-07]_katachi.mp3", name: "X_[04-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-08]_kaiwa.mp3", name: "X_[04-08]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-09]_katachi1.mp3", name: "X_[04-09]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-10]_katachi2_number1.mp3", name: "X_[04-10]_katachi2_number1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-11]_katachi2_age1.mp3", name: "X_[04-11]_katachi2_age1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-12]_katachi2_number2.mp3", name: "X_[04-12]_katachi2_number2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-13]_katachi2_age2.mp3", name: "X_[04-13]_katachi2_age2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-14]_katachi2_example.mp3", name: "X_[04-14]_katachi2_example.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-15]_hanasu.mp3", name: "X_[04-15]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-16]_hanasu1.mp3", name: "X_[04-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-17]_hanasu2.mp3", name: "X_[04-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-18]_kiku1.mp3", name: "X_[04-18]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-19]_kiku2.mp3", name: "X_[04-19]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-20]_kiku3.mp3", name: "X_[04-20]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-21]_kiku4.mp3", name: "X_[04-21]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-22]_katachi.mp3", name: "X_[04-22]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-23]_hanasu1.mp3", name: "X_[04-23]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/04/X_[04-24]_hanasu2.mp3", name: "X_[04-24]_hanasu2.mp3"},
+  ],
+  "starter_05": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-01]_kiku1.mp3", name: "X_[05-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-02]_kiku2.mp3", name: "X_[05-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-03]_kiku3.mp3", name: "X_[05-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-04]_kiku4.mp3", name: "X_[05-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-05]_katachi.mp3", name: "X_[05-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-06]_hanasu1.mp3", name: "X_[05-06]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-07]_hanasu2.mp3", name: "X_[05-07]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-08]_hanasu3.mp3", name: "X_[05-08]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-09]_kotoba1.mp3", name: "X_[05-09]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-10]_kotoba2.mp3", name: "X_[05-10]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-11]_kiku1.mp3", name: "X_[05-11]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-12]_kiku2.mp3", name: "X_[05-12]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-13]_kiku3.mp3", name: "X_[05-13]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-14]_kiku4.mp3", name: "X_[05-14]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-15]_katachi.mp3", name: "X_[05-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-16]_hanasu1.mp3", name: "X_[05-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-17]_hanasu2.mp3", name: "X_[05-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-18]_kotoba1.mp3", name: "X_[05-18]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-19]_kotoba2.mp3", name: "X_[05-19]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-20]_kiku1.mp3", name: "X_[05-20]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-21]_kiku2.mp3", name: "X_[05-21]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-22]_kiku3.mp3", name: "X_[05-22]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-23]_kiku4.mp3", name: "X_[05-23]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-24]_katachi1.mp3", name: "X_[05-24]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-25]_katachi2.mp3", name: "X_[05-25]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-26]_katachi3.mp3", name: "X_[05-26]_katachi3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-27]_hanasu1-1.mp3", name: "X_[05-27]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-28]_hanasu1-2.mp3", name: "X_[05-28]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-29]_hanasu2.mp3", name: "X_[05-29]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-30]_kotoba1.mp3", name: "X_[05-30]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-31]_kotoba2.mp3", name: "X_[05-31]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-32]_kaiwa.mp3", name: "X_[05-32]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-33]_katachi1.mp3", name: "X_[05-33]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-34]_katachi2.mp3", name: "X_[05-34]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/05/X_[05-35]_hanasu.mp3", name: "X_[05-35]_hanasu.mp3"},
+  ],
+  "starter_06": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-01]_kiku1.mp3", name: "X_[06-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-02]_kiku2.mp3", name: "X_[06-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-03]_kiku3.mp3", name: "X_[06-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-04]_katachi.mp3", name: "X_[06-04]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-05]_hanasu1.mp3", name: "X_[06-05]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-06]_hanasu2.mp3", name: "X_[06-06]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-07]_hanasu3.mp3", name: "X_[06-07]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-08]_kaiwa.mp3", name: "X_[06-08]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-09]_katachi.mp3", name: "X_[06-09]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-10]_hanasu1.mp3", name: "X_[06-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-11]_hanasu2.mp3", name: "X_[06-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-12]_hanasu3.mp3", name: "X_[06-12]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-13]_kotoba1.mp3", name: "X_[06-13]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-14]_kotoba2.mp3", name: "X_[06-14]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-15]_kaiwa.mp3", name: "X_[06-15]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-16]_katachi1.mp3", name: "X_[06-16]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-17]_katachi2_counting.mp3", name: "X_[06-17]_katachi2_counting.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-18]_hanasu1.mp3", name: "X_[06-18]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-19]_hanasu2-1.mp3", name: "X_[06-19]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/06/X_[06-20]_hanasu2-2.mp3", name: "X_[06-20]_hanasu2-2.mp3"},
+  ],
+  "starter_07": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-01]_kotoba1.mp3", name: "X_[07-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-02]_kotoba2.mp3", name: "X_[07-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-03]_kiku.mp3", name: "X_[07-03]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-04]_katachi.mp3", name: "X_[07-04]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-05]_kotoba1.mp3", name: "X_[07-05]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-06]_kotoba2.mp3", name: "X_[07-06]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-07]_kiku1.mp3", name: "X_[07-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-08]_kiku2.mp3", name: "X_[07-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-09]_katachi.mp3", name: "X_[07-09]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-10]_hanasu1.mp3", name: "X_[07-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-11]_hanasu2.mp3", name: "X_[07-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-12]_hanasu3.mp3", name: "X_[07-12]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-13]_kotoba1.mp3", name: "X_[07-13]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-14]_kotoba2.mp3", name: "X_[07-14]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-15]_kiku1.mp3", name: "X_[07-15]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-16]_kiku2.mp3", name: "X_[07-16]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-17]_kiku3.mp3", name: "X_[07-17]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-18]_kiku4.mp3", name: "X_[07-18]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-19]_katachi.mp3", name: "X_[07-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-20]_hanasu1.mp3", name: "X_[07-20]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-21]_hanasu2.mp3", name: "X_[07-21]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-22]_kiku1.mp3", name: "X_[07-22]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-23]_kiku2.mp3", name: "X_[07-23]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-24]_kiku3.mp3", name: "X_[07-24]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-25]_katachi.mp3", name: "X_[07-25]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-26]_hanasu1.mp3", name: "X_[07-26]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-27]_hanasu2.mp3", name: "X_[07-27]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/07/X_[07-28]_hanasu3.mp3", name: "X_[07-28]_hanasu3.mp3"},
+  ],
+  "starter_08": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-01]_kotoba1.mp3", name: "X_[08-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-02]_kotoba2.mp3", name: "X_[08-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-03]_kiku1.mp3", name: "X_[08-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-04]_kiku2.mp3", name: "X_[08-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-05]_kiku3.mp3", name: "X_[08-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-06]_kiku4.mp3", name: "X_[08-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-07]_katachi.mp3", name: "X_[08-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-08]_kiku1.mp3", name: "X_[08-08]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-09]_kiku2.mp3", name: "X_[08-09]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-10]_kiku3.mp3", name: "X_[08-10]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-11]_kiku4.mp3", name: "X_[08-11]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-12]_katachi.mp3", name: "X_[08-12]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-13]_hanasu1.mp3", name: "X_[08-13]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-14]_hanasu2.mp3", name: "X_[08-14]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-15]_kotoba1.mp3", name: "X_[08-15]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-16]_kotoba2.mp3", name: "X_[08-16]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-17]_kiku1.mp3", name: "X_[08-17]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-18]_kiku2.mp3", name: "X_[08-18]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-19]_kiku3.mp3", name: "X_[08-19]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-20]_kiku4.mp3", name: "X_[08-20]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-21]_kiku5.mp3", name: "X_[08-21]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-22]_katachi.mp3", name: "X_[08-22]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-23]_katachi.mp3", name: "X_[08-23]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-24]_hanasu1.mp3", name: "X_[08-24]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/08/X_[08-25]_hanasu2.mp3", name: "X_[08-25]_hanasu2.mp3"},
+  ],
+  "starter_09": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-01]_kotoba1.mp3", name: "X_[09-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-02]_kotoba2.mp3", name: "X_[09-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-03]_kiku1.mp3", name: "X_[09-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-04]_kiku2.mp3", name: "X_[09-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-05]_kiku3.mp3", name: "X_[09-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-06]_katachi.mp3", name: "X_[09-06]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-07]_hanasu1.mp3", name: "X_[09-07]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-08]_hanasu2.mp3", name: "X_[09-08]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-09]_kiku.mp3", name: "X_[09-09]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-10]_katachi.mp3", name: "X_[09-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-11]_kotoba1.mp3", name: "X_[09-11]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-12]_kotoba2.mp3", name: "X_[09-12]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-13]_kiku1.mp3", name: "X_[09-13]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-14]_kiku2.mp3", name: "X_[09-14]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-15]_kiku3.mp3", name: "X_[09-15]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-16]_katachi.mp3", name: "X_[09-16]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-17]_hanasu1.mp3", name: "X_[09-17]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-18]_hanasu2.mp3", name: "X_[09-18]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/09/X_[09-19]_hanasu3.mp3", name: "X_[09-19]_hanasu3.mp3"},
+  ],
+  "starter_10": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-01]_kiku1.mp3", name: "X_[10-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-02]_kiku2.mp3", name: "X_[10-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-03]_kiku3.mp3", name: "X_[10-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-04]_kiku4.mp3", name: "X_[10-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-05]_kiku5.mp3", name: "X_[10-05]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-06]_kiku6.mp3", name: "X_[10-06]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-07]_kiku7.mp3", name: "X_[10-07]_kiku7.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-08]_kiku8.mp3", name: "X_[10-08]_kiku8.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-09]_kiku9.mp3", name: "X_[10-09]_kiku9.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-10]_katachi.mp3", name: "X_[10-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-11]_kiku1.mp3", name: "X_[10-11]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-12]_kiku2.mp3", name: "X_[10-12]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-13]_kiku3.mp3", name: "X_[10-13]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-14]_kiku4.mp3", name: "X_[10-14]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-15]_katachi1.mp3", name: "X_[10-15]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-16]_katachi2_time.mp3", name: "X_[10-16]_katachi2_time.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-17]_hanasu1-1.mp3", name: "X_[10-17]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-18]_hanasu1-2.mp3", name: "X_[10-18]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-19]_hanasu2-1.mp3", name: "X_[10-19]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-20]_hanasu2-2.mp3", name: "X_[10-20]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-21]_kotoba1.mp3", name: "X_[10-21]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-22]_kotoba2.mp3", name: "X_[10-22]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-23]_kiku1.mp3", name: "X_[10-23]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-24]_kiku2.mp3", name: "X_[10-24]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-25]_kiku3.mp3", name: "X_[10-25]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-26]_kiku4.mp3", name: "X_[10-26]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-27]_katachi.mp3", name: "X_[10-27]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-28]_hanasu1-1.mp3", name: "X_[10-28]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-29]_hanasu1-2.mp3", name: "X_[10-29]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-30]_hanasu1-3.mp3", name: "X_[10-30]_hanasu1-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/10/X_[10-31]_hanasu2.mp3", name: "X_[10-31]_hanasu2.mp3"},
+  ],
+  "starter_11": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-01]_kiku1.mp3", name: "X_[11-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-02]_kiku2.mp3", name: "X_[11-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-03]_kiku3.mp3", name: "X_[11-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-04]_kiku4.mp3", name: "X_[11-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-05]_kiku5.mp3", name: "X_[11-05]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-06]_kiku6 .mp3", name: "X_[11-06]_kiku6 .mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-07]_katachi.mp3", name: "X_[11-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-08]_hanasu1.mp3", name: "X_[11-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-09]_hanasu2.mp3", name: "X_[11-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-10]_kaiwa.mp3", name: "X_[11-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-11]_katachi.mp3", name: "X_[11-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-12]_hanasu1.mp3", name: "X_[11-12]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-13]_hanasu2-1.mp3", name: "X_[11-13]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-14]_hanasu2-2.mp3", name: "X_[11-14]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-15]_kotoba1.mp3", name: "X_[11-15]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-16]_kotoba2.mp3", name: "X_[11-16]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-17]_kiku1.mp3", name: "X_[11-17]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-18]_kiku2.mp3", name: "X_[11-18]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-19]_kiku3.mp3", name: "X_[11-19]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-20]_kiku4.mp3", name: "X_[11-20]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-21]_katachi1.mp3", name: "X_[11-21]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-22]_katachi2.mp3", name: "X_[11-22]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-23]_hanasu1.mp3", name: "X_[11-23]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/11/X_[11-24]_hanasu2.mp3", name: "X_[11-24]_hanasu2.mp3"},
+  ],
+  "starter_12": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-01]_yomu_month.mp3", name: "X_[12-01]_yomu_month.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-02]_yomu_date.mp3", name: "X_[12-02]_yomu_date.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-03]_kotoba1.mp3", name: "X_[12-03]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-04]_kotoba2.mp3", name: "X_[12-04]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-05]_kiku1.mp3", name: "X_[12-05]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-06]_kiku2.mp3", name: "X_[12-06]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-07]_kiku3.mp3", name: "X_[12-07]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-08]_kiku4.mp3", name: "X_[12-08]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-09]_kiku5.mp3", name: "X_[12-09]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-10]_katachi.mp3", name: "X_[12-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-11]_katachi.mp3", name: "X_[12-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-12]_hanasu1.mp3", name: "X_[12-12]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-13]_hanasu2.mp3", name: "X_[12-13]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-14]_kiku1.mp3", name: "X_[12-14]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-15]_kiku2.mp3", name: "X_[12-15]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-16]_kiku3.mp3", name: "X_[12-16]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-17]_kiku4.mp3", name: "X_[12-17]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-18]_katachi.mp3", name: "X_[12-18]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-19]_katachi.mp3", name: "X_[12-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-20]_hanasu1.mp3", name: "X_[12-20]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/12/X_[12-21]_hanasu2.mp3", name: "X_[12-21]_hanasu2.mp3"},
+  ],
+  "starter_13": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-01]_kotoba1.mp3", name: "X_[13-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-02]_kotoba2.mp3", name: "X_[13-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-03]_kiku1.mp3", name: "X_[13-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-04]_kiku2.mp3", name: "X_[13-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-05]_kiku3.mp3", name: "X_[13-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-06]_kiku4.mp3", name: "X_[13-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-07]_kiku5.mp3", name: "X_[13-07]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-08]_katachi.mp3", name: "X_[13-08]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-09]_hanasu1.mp3", name: "X_[13-09]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-10]_hanasu2.mp3", name: "X_[13-10]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-11]_kiku1.mp3", name: "X_[13-11]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-12]_kiku2.mp3", name: "X_[13-12]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-13]_kiku3.mp3", name: "X_[13-13]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-14]_kiku4.mp3", name: "X_[13-14]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-15]_kiku5.mp3", name: "X_[13-15]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-16]_katachi.mp3", name: "X_[13-16]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-17]_hanasu1.mp3", name: "X_[13-17]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-18]_hanasu2-1.mp3", name: "X_[13-18]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-19]_hanasu2-2.mp3", name: "X_[13-19]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-20]_kotoba1.mp3", name: "X_[13-20]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-21]_kotoba2.mp3", name: "X_[13-21]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-22]_kiku1.mp3", name: "X_[13-22]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-23]_kiku2.mp3", name: "X_[13-23]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-24]_kiku3.mp3", name: "X_[13-24]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-25]_kiku4.mp3", name: "X_[13-25]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-26]_katachi.mp3", name: "X_[13-26]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-27]_katachi.mp3", name: "X_[13-27]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-28]_hanasu1.mp3", name: "X_[13-28]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-29]_hanasu2.mp3", name: "X_[13-29]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-30]_kiku1.mp3", name: "X_[13-30]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-31]_kiku2.mp3", name: "X_[13-31]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-32]_kiku3.mp3", name: "X_[13-32]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/13/X_[13-33]_katachi.mp3", name: "X_[13-33]_katachi.mp3"},
+  ],
+  "starter_14": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-01]_kiku1.mp3", name: "X_[14-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-02]_kiku2.mp3", name: "X_[14-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-03]_kiku3.mp3", name: "X_[14-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-04]_kiku4.mp3", name: "X_[14-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-05]_kiku5.mp3", name: "X_[14-05]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-06]_kiku6 .mp3", name: "X_[14-06]_kiku6 .mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-07]_katachi.mp3", name: "X_[14-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-08]_hanasu1.mp3", name: "X_[14-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-09]_hanasu2.mp3", name: "X_[14-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-10]_hanasu3.mp3", name: "X_[14-10]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-11]_kotoba1.mp3", name: "X_[14-11]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-12]_kotoba2.mp3", name: "X_[14-12]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-13]_kiku1.mp3", name: "X_[14-13]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-14]_kiku2.mp3", name: "X_[14-14]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-15]_kiku3.mp3", name: "X_[14-15]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-16]_kiku4.mp3", name: "X_[14-16]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-17]_katachi.mp3", name: "X_[14-17]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-18]_hanasu1.mp3", name: "X_[14-18]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-19]_hanasu2.mp3", name: "X_[14-19]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-20]_kotoba1.mp3", name: "X_[14-20]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-21]_kotoba2.mp3", name: "X_[14-21]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-22]_kiku1.mp3", name: "X_[14-22]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-23]_kiku2.mp3", name: "X_[14-23]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-24]_kiku3.mp3", name: "X_[14-24]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-25]_kiku4.mp3", name: "X_[14-25]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-26]_kiku5.mp3", name: "X_[14-26]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-27]_kiku6.mp3", name: "X_[14-27]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-28]_katachi.mp3", name: "X_[14-28]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-29]_hanasu1.mp3", name: "X_[14-29]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/14/X_[14-30]_hanasu2.mp3", name: "X_[14-30]_hanasu2.mp3"},
+  ],
+  "starter_15": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-01]_kotoba1.mp3", name: "X_[15-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-02]_kotoba2.mp3", name: "X_[15-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-03]_kiku1.mp3", name: "X_[15-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-04]_kiku2.mp3", name: "X_[15-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-05]_kiku3.mp3", name: "X_[15-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-06]_kiku4.mp3", name: "X_[15-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-07]_kiku5.mp3", name: "X_[15-07]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-08]_kiku6.mp3", name: "X_[15-08]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-09]_katachi.mp3", name: "X_[15-09]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-10]_hanasu1.mp3", name: "X_[15-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-11]_hanasu2.mp3", name: "X_[15-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-12]_kiku1.mp3", name: "X_[15-12]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-13]_kiku2.mp3", name: "X_[15-13]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-14]_kiku3.mp3", name: "X_[15-14]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-15]_kiku4.mp3", name: "X_[15-15]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-16]_katachi1.mp3", name: "X_[15-16]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-17]_katachi2_floor.mp3", name: "X_[15-17]_katachi2_floor.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-18]_hanasu1.mp3", name: "X_[15-18]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-19]_hanasu2.mp3", name: "X_[15-19]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-20]_hanasu3.mp3", name: "X_[15-20]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-21]_hanasu4.mp3", name: "X_[15-21]_hanasu4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-22]_kotoba1.mp3", name: "X_[15-22]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-23]_kotoba2.mp3", name: "X_[15-23]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-24]_kiku1.mp3", name: "X_[15-24]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-25]_kiku2.mp3", name: "X_[15-25]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-26]_kiku3.mp3", name: "X_[15-26]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-27]_kiku4.mp3", name: "X_[15-27]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-28]_kiku5.mp3", name: "X_[15-28]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-29]_katachi.mp3", name: "X_[15-29]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-30]_hanasu1.mp3", name: "X_[15-30]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/15/X_[15-31]_hanasu2.mp3", name: "X_[15-31]_hanasu2.mp3"},
+  ],
+  "starter_16": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-01]_kotoba1.mp3", name: "X_[16-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-02]_kotoba2_number1.mp3", name: "X_[16-02]_kotoba2_number1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-03]_kotoba2_price1.mp3", name: "X_[16-03]_kotoba2_price1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-04]_kotoba2_number2.mp3", name: "X_[16-04]_kotoba2_number2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-05]_kotoba2_price2.mp3", name: "X_[16-05]_kotoba2_price2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-06]_kotoba3.mp3", name: "X_[16-06]_kotoba3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-07]_kiku1.mp3", name: "X_[16-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-08]_kiku2.mp3", name: "X_[16-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-09]_kiku3.mp3", name: "X_[16-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-10]_kiku4.mp3", name: "X_[16-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-11]_kiku1.mp3", name: "X_[16-11]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-12]_kiku2.mp3", name: "X_[16-12]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-13]_kiku3.mp3", name: "X_[16-13]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-14]_kiku4.mp3", name: "X_[16-14]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-15]_katachi.mp3", name: "X_[16-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-16]_hanasu1.mp3", name: "X_[16-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-17]_hanasu2.mp3", name: "X_[16-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-18]_kiku1.mp3", name: "X_[16-18]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-19]_kiku2.mp3", name: "X_[16-19]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-20]_kiku3.mp3", name: "X_[16-20]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-21]_kiku4.mp3", name: "X_[16-21]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-22]_kiku5.mp3", name: "X_[16-22]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-23]_katachi1.mp3", name: "X_[16-23]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-24]_katachi2_number.mp3", name: "X_[16-24]_katachi2_number.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-25]_hanasu1.mp3", name: "X_[16-25]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-26]_hanasu2.mp3", name: "X_[16-26]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-27]_hanasu3.mp3", name: "X_[16-27]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-28]_hanasu4.mp3", name: "X_[16-28]_hanasu4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-29]_kaiwa.mp3", name: "X_[16-29]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-30]_hanasu1.mp3", name: "X_[16-30]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-31]_hanasu2.mp3", name: "X_[16-31]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-32]_hanasu3.mp3", name: "X_[16-32]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/16/X_[16-33]_hanasu4.mp3", name: "X_[16-33]_hanasu4.mp3"},
+  ],
+  "starter_17": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-01]_kiku1.mp3", name: "X_[17-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-02]_kiku2.mp3", name: "X_[17-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-03]_kiku3.mp3", name: "X_[17-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-04]_kiku4.mp3", name: "X_[17-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-05]_kiku5.mp3", name: "X_[17-05]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-06]_kiku6.mp3", name: "X_[17-06]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-07]_katachi.mp3", name: "X_[17-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-08]_hanasu1.mp3", name: "X_[17-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-09]_hanasu2.mp3", name: "X_[17-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-10]_kaiwa.mp3", name: "X_[17-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-11]_katachi1.mp3", name: "X_[17-11]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-12]_katachi2.mp3", name: "X_[17-12]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-13]_hanasu1.mp3", name: "X_[17-13]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/17/X_[17-14]_hanasu2.mp3", name: "X_[17-14]_hanasu2.mp3"},
+  ],
+  "starter_18": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-01]_kiku1.mp3", name: "X_[18-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-02]_kiku2.mp3", name: "X_[18-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-03]_kiku3.mp3", name: "X_[18-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-04]_kiku4.mp3", name: "X_[18-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-05]_katachi.mp3", name: "X_[18-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-06]_katachi.mp3", name: "X_[18-06]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-07]_hanasu1.mp3", name: "X_[18-07]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-08]_hanasu2.mp3", name: "X_[18-08]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-09]_hanasu3.mp3", name: "X_[18-09]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-10]_kaiwa.mp3", name: "X_[18-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-11]_katachi.mp3", name: "X_[18-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-12]_katachi.mp3", name: "X_[18-12]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-13]_hanasu.mp3", name: "X_[18-13]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-14]_kaiwa.mp3", name: "X_[18-14]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-15]_katachi.mp3", name: "X_[18-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/starter/audio/18/X_[18-16]_hanasu.mp3", name: "X_[18-16]_hanasu.mp3"},
+  ],
+  "elem1_01": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-01]_kaiwa1.mp3", name: "Y_[01-01]_kaiwa1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-02]_kaiwa2.mp3", name: "Y_[01-02]_kaiwa2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-03]_kaiwa3.mp3", name: "Y_[01-03]_kaiwa3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-04]_hanasu1.mp3", name: "Y_[01-04]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-05]_hanasu2.mp3", name: "Y_[01-05]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-06]_kiku1.mp3", name: "Y_[01-06]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-07]_kiku2.mp3", name: "Y_[01-07]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-08]_kiku3.mp3", name: "Y_[01-08]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-09]_kiku4.mp3", name: "Y_[01-09]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-10]_katachi1.mp3", name: "Y_[01-10]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-11]_katachi2-1.mp3", name: "Y_[01-11]_katachi2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-12]_katachi2-2.mp3", name: "Y_[01-12]_katachi2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-13]_katachi2-3.mp3", name: "Y_[01-13]_katachi2-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-14]_hanasu1.mp3", name: "Y_[01-14]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-15]_hanasu2.mp3", name: "Y_[01-15]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-16]_kotoba1.mp3", name: "Y_[01-16]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-17]_kotoba2.mp3", name: "Y_[01-17]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-18]_kiku1.mp3", name: "Y_[01-18]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-19]_kiku2.mp3", name: "Y_[01-19]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-20]_kiku3.mp3", name: "Y_[01-20]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-21]_kiku4.mp3", name: "Y_[01-21]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-22]_kiku5.mp3", name: "Y_[01-22]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-23]_kiku6.mp3", name: "Y_[01-23]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-24]_katachi.mp3", name: "Y_[01-24]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-25]_hanasu1.mp3", name: "Y_[01-25]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-26]_hanasu2.mp3", name: "Y_[01-26]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/01/Y_[01-27]_hanasu3.mp3", name: "Y_[01-27]_hanasu3.mp3"},
+  ],
+  "elem1_02": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-01]_kotoba1.mp3", name: "Y_[02-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-02]_kotoba2.mp3", name: "Y_[02-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-03]_kiku1.mp3", name: "Y_[02-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-04]_kiku2.mp3", name: "Y_[02-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-05]_kiku3.mp3", name: "Y_[02-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-06]_kiku4.mp3", name: "Y_[02-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-07]_kiku5.mp3", name: "Y_[02-07]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-08]_kiku6.mp3", name: "Y_[02-08]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-09]_kiku7.mp3", name: "Y_[02-09]_kiku7.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-10]_katachi.mp3", name: "Y_[02-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-11]_hanasu1.mp3", name: "Y_[02-11]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-12]_hanasu2.mp3", name: "Y_[02-12]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-13]_kaiwa.mp3", name: "Y_[02-13]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-14]_katachi.mp3", name: "Y_[02-14]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-15]_hanasu1.mp3", name: "Y_[02-15]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-16]_hanasu2.mp3", name: "Y_[02-16]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/02/Y_[02-17]_katachi.mp3", name: "Y_[02-17]_katachi.mp3"},
+  ],
+  "elem1_03": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-01]_kotoba1.mp3", name: "Y_[03-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-02]_kotoba2.mp3", name: "Y_[03-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-03]_kiku.mp3", name: "Y_[03-03]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-04]_katachi.mp3", name: "Y_[03-04]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-05]_kiku1.mp3", name: "Y_[03-05]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-06]_kiku2.mp3", name: "Y_[03-06]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-07]_kiku3.mp3", name: "Y_[03-07]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-08]_kiku4.mp3", name: "Y_[03-08]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-09]_hanasu1.mp3", name: "Y_[03-09]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-10]_hanasu2.mp3", name: "Y_[03-10]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-11]_hanasu3.mp3", name: "Y_[03-11]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-12]_kaiwa.mp3", name: "Y_[03-12]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-13]_katachi.mp3", name: "Y_[03-13]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/03/Y_[03-14]_hanasu.mp3", name: "Y_[03-14]_hanasu.mp3"},
+  ],
+  "elem1_04": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-01]_kotoba1.mp3", name: "Y_[04-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-02]_kotoba2.mp3", name: "Y_[04-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-03]_kiku1.mp3", name: "Y_[04-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-04]_kiku2.mp3", name: "Y_[04-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-05]_kiku3.mp3", name: "Y_[04-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-06]_kiku4.mp3", name: "Y_[04-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-07]_katachi.mp3", name: "Y_[04-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-08]_hanasu1.mp3", name: "Y_[04-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-09]_hanasu2.mp3", name: "Y_[04-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-10]_hanasu3.mp3", name: "Y_[04-10]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-11]_kiku.mp3", name: "Y_[04-11]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/04/Y_[04-12]_katachi.mp3", name: "Y_[04-12]_katachi.mp3"},
+  ],
+  "elem1_05": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-01]_kotoba1.mp3", name: "Y_[05-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-02]_kotoba2.mp3", name: "Y_[05-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-03]_kiku1.mp3", name: "Y_[05-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-04]_kiku2.mp3", name: "Y_[05-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-05]_kiku3.mp3", name: "Y_[05-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-06]_kiku4.mp3", name: "Y_[05-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-07]_katachi.mp3", name: "Y_[05-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-08]_hanasu1.mp3", name: "Y_[05-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-09]_hanasu2.mp3", name: "Y_[05-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-10]_kiku1.mp3", name: "Y_[05-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-11]_kiku2.mp3", name: "Y_[05-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-12]_kiku3.mp3", name: "Y_[05-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-13]_kiku4.mp3", name: "Y_[05-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/05/Y_[05-14]_katachi.mp3", name: "Y_[05-14]_katachi.mp3"},
+  ],
+  "elem1_06": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-01]_kotoba1-1.mp3", name: "Y_[06-01]_kotoba1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-02]_kotoba1-2.mp3", name: "Y_[06-02]_kotoba1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-03]_kotoba2-1.mp3", name: "Y_[06-03]_kotoba2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-04]_kotoba2-2.mp3", name: "Y_[06-04]_kotoba2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-05]_kiku1.mp3", name: "Y_[06-05]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-06]_kiku2.mp3", name: "Y_[06-06]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-07]_kiku3.mp3", name: "Y_[06-07]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-08]_kiku4.mp3", name: "Y_[06-08]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-09]_katachi.mp3", name: "Y_[06-09]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-10]_kotoba1.mp3", name: "Y_[06-10]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-11]_kotoba2.mp3", name: "Y_[06-11]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-12]_kiku.mp3", name: "Y_[06-12]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-13]_kaiwa.mp3", name: "Y_[06-13]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-14]_katachi.mp3", name: "Y_[06-14]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/06/Y_[06-15]_hanasu.mp3", name: "Y_[06-15]_hanasu.mp3"},
+  ],
+  "elem1_07": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-01]_kiku1.mp3", name: "Y_[07-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-02]_kiku2.mp3", name: "Y_[07-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-03]_kiku3.mp3", name: "Y_[07-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-04]_kiku4.mp3", name: "Y_[07-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-05]_kaiwa.mp3", name: "Y_[07-05]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-06]_katachi.mp3", name: "Y_[07-06]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-07]_hanasu1.mp3", name: "Y_[07-07]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-08]_hanasu2.mp3", name: "Y_[07-08]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/07/Y_[07-09]_hanasu3.mp3", name: "Y_[07-09]_hanasu3.mp3"},
+  ],
+  "elem1_08": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-01]_kiku1.mp3", name: "Y_[08-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-02]_kiku2.mp3", name: "Y_[08-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-03]_kiku3.mp3", name: "Y_[08-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-04]_kiku4.mp3", name: "Y_[08-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-05]_kiku5.mp3", name: "Y_[08-05]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-06]_kiku6.mp3", name: "Y_[08-06]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-07]_katachi1.mp3", name: "Y_[08-07]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-08]_katachi2.mp3", name: "Y_[08-08]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-09]_hanasu1.mp3", name: "Y_[08-09]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-10]_hanasu2-1.mp3", name: "Y_[08-10]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-11]_hanasu2-2.mp3", name: "Y_[08-11]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-12]_kaiwa.mp3", name: "Y_[08-12]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-13]_katachi.mp3", name: "Y_[08-13]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-14]_hanasu1.mp3", name: "Y_[08-14]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-15]_hanasu2.mp3", name: "Y_[08-15]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-16]_kiku1.mp3", name: "Y_[08-16]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-17]_kiku2.mp3", name: "Y_[08-17]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-18]_kiku3.mp3", name: "Y_[08-18]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-19]_kiku4.mp3", name: "Y_[08-19]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-20]_katachi.mp3", name: "Y_[08-20]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-21]_hanasu1.mp3", name: "Y_[08-21]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/08/Y_[08-22]_hanasu2.mp3", name: "Y_[08-22]_hanasu2.mp3"},
+  ],
+  "elem1_09": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-01]_kiku1.mp3", name: "Y_[09-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-02]_kiku2.mp3", name: "Y_[09-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-03]_kiku3.mp3", name: "Y_[09-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-04]_kiku4.mp3", name: "Y_[09-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-05]_katachi.mp3", name: "Y_[09-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-06]_hanasu.mp3", name: "Y_[09-06]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-07]_kotoba1.mp3", name: "Y_[09-07]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-08]_kotoba2.mp3", name: "Y_[09-08]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-09]_kiku1.mp3", name: "Y_[09-09]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-10]_kiku2.mp3", name: "Y_[09-10]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-11]_kiku3.mp3", name: "Y_[09-11]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-12]_kiku4.mp3", name: "Y_[09-12]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-13]_katachi1.mp3", name: "Y_[09-13]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-14]_katachi2.mp3", name: "Y_[09-14]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-15]_hanasu1.mp3", name: "Y_[09-15]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-16]_hanasu2.mp3", name: "Y_[09-16]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-17]_hanasu3-1.mp3", name: "Y_[09-17]_hanasu3-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-18]_hanasu3-2.mp3", name: "Y_[09-18]_hanasu3-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-19]_kiku1.mp3", name: "Y_[09-19]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-20]_kiku2.mp3", name: "Y_[09-20]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-21]_kiku3.mp3", name: "Y_[09-21]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-22]_kiku4.mp3", name: "Y_[09-22]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-23]_katachi.mp3", name: "Y_[09-23]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/09/Y_[09-24]_hanasu.mp3", name: "Y_[09-24]_hanasu.mp3"},
+  ],
+  "elem1_10": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-01]_kiku1.mp3", name: "Y_[10-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-02]_kiku2.mp3", name: "Y_[10-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-03]_kiku3.mp3", name: "Y_[10-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-04]_kiku4.mp3", name: "Y_[10-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-05]_katachi.mp3", name: "Y_[10-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-06]_kaiwa.mp3", name: "Y_[10-06]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-07]_katachi.mp3", name: "Y_[10-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-08]_hanasu.mp3", name: "Y_[10-08]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-09]_kaiwa.mp3", name: "Y_[10-09]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-10]_katachi.mp3", name: "Y_[10-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/10/Y_[10-11]_hanasu.mp3", name: "Y_[10-11]_hanasu.mp3"},
+  ],
+  "elem1_11": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-01]_kotoba1.mp3", name: "Y_[11-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-02]_kotoba2.mp3", name: "Y_[11-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-03]_kiku1.mp3", name: "Y_[11-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-04]_kiku2.mp3", name: "Y_[11-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-05]_kiku3.mp3", name: "Y_[11-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-06]_kiku4.mp3", name: "Y_[11-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-07]_katachi.mp3", name: "Y_[11-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-08]_hanasu1.mp3", name: "Y_[11-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-09]_hanasu2.mp3", name: "Y_[11-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-10]_kaiwa.mp3", name: "Y_[11-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-11]_katachi.mp3", name: "Y_[11-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-12]_hanasu1-1.mp3", name: "Y_[11-12]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-13]_hanasu1-2.mp3", name: "Y_[11-13]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-14]_hanasu2.mp3", name: "Y_[11-14]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-15]_kotoba1.mp3", name: "Y_[11-15]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-16]_kotoba2.mp3", name: "Y_[11-16]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-17]_kiku1.mp3", name: "Y_[11-17]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-18]_kiku2.mp3", name: "Y_[11-18]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-19]_kiku3.mp3", name: "Y_[11-19]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-20]_kiku4.mp3", name: "Y_[11-20]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-21]_katachi.mp3", name: "Y_[11-21]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-22]_hanasu1-1.mp3", name: "Y_[11-22]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-23]_hanasu1-2.mp3", name: "Y_[11-23]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-24]_hanasu1-3.mp3", name: "Y_[11-24]_hanasu1-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-25]_hanasu2-1.mp3", name: "Y_[11-25]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/11/Y_[11-26]_hanasu2-2.mp3", name: "Y_[11-26]_hanasu2-2.mp3"},
+  ],
+  "elem1_12": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-01]_kotoba1.mp3", name: "Y_[12-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-02]_kotoba2.mp3", name: "Y_[12-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-03]_kiku1.mp3", name: "Y_[12-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-04]_kiku2.mp3", name: "Y_[12-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-05]_kiku3.mp3", name: "Y_[12-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-06]_kiku4.mp3", name: "Y_[12-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-07]_katachi.mp3", name: "Y_[12-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-08]_hanasu1.mp3", name: "Y_[12-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-09]_hanasu2.mp3", name: "Y_[12-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-10]_kiku1.mp3", name: "Y_[12-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-11]_kiku2.mp3", name: "Y_[12-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-12]_kiku3.mp3", name: "Y_[12-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-13]_kiku4.mp3", name: "Y_[12-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-14]_katachi.mp3", name: "Y_[12-14]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-15]_hanasu1.mp3", name: "Y_[12-15]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-16]_hanasu2.mp3", name: "Y_[12-16]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-17]_hanasu3.mp3", name: "Y_[12-17]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-18]_kaiwa.mp3", name: "Y_[12-18]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-19]_katachi.mp3", name: "Y_[12-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/12/Y_[12-20]_hanasu.mp3", name: "Y_[12-20]_hanasu.mp3"},
+  ],
+  "elem1_13": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-01]_kiku1.mp3", name: "Y_[13-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-02]_kiku2.mp3", name: "Y_[13-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-03]_kiku3.mp3", name: "Y_[13-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-04]_kiku4.mp3", name: "Y_[13-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-05]_katachi.mp3", name: "Y_[13-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-06]_hanasu.mp3", name: "Y_[13-06]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-07]_kiku1.mp3", name: "Y_[13-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-08]_kiku2.mp3", name: "Y_[13-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-09]_kiku3.mp3", name: "Y_[13-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-10]_kiku4.mp3", name: "Y_[13-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-11]_katachi.mp3", name: "Y_[13-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-12]_hanasu1-1.mp3", name: "Y_[13-12]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-13]_hanasu1-2.mp3", name: "Y_[13-13]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-14]_hanasu2-1.mp3", name: "Y_[13-14]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-15]_hanasu2-2.mp3", name: "Y_[13-15]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-16]_hanasu2-3.mp3", name: "Y_[13-16]_hanasu2-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-17]_kaiwa.mp3", name: "Y_[13-17]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-18]_katachi.mp3", name: "Y_[13-18]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-19]_hanasu.mp3", name: "Y_[13-19]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-20]_kiku1.mp3", name: "Y_[13-20]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-21]_kiku2.mp3", name: "Y_[13-21]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/13/Y_[13-22]_kiku3.mp3", name: "Y_[13-22]_kiku3.mp3"},
+  ],
+  "elem1_14": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-01]_kiku1.mp3", name: "Y_[14-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-02]_kiku2.mp3", name: "Y_[14-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-03]_kiku3.mp3", name: "Y_[14-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-04]_kiku4.mp3", name: "Y_[14-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-05]_katachi.mp3", name: "Y_[14-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-06]_hanasu1.mp3", name: "Y_[14-06]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-07]_hanasu2.mp3", name: "Y_[14-07]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-08]_kiku1.mp3", name: "Y_[14-08]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-09]_kiku2.mp3", name: "Y_[14-09]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-10]_kiku3.mp3", name: "Y_[14-10]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-11]_kiku4.mp3", name: "Y_[14-11]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-12]_katachi.mp3", name: "Y_[14-12]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-13]_hanasu.mp3", name: "Y_[14-13]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-14]_kaiwa1.mp3", name: "Y_[14-14]_kaiwa1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-15]_kaiwa2.mp3", name: "Y_[14-15]_kaiwa2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-16]_katachi.mp3", name: "Y_[14-16]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-17]_hanasu1.mp3", name: "Y_[14-17]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-18]_hanasu2.mp3", name: "Y_[14-18]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/14/Y_[14-19]_kiku.mp3", name: "Y_[14-19]_kiku.mp3"},
+  ],
+  "elem1_15": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-01]_kotoba1.mp3", name: "Y_[15-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-02]_kotoba2.mp3", name: "Y_[15-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-03]_kiku1.mp3", name: "Y_[15-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-04]_kiku2.mp3", name: "Y_[15-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-05]_kiku3.mp3", name: "Y_[15-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-06]_kiku4.mp3", name: "Y_[15-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-07]_katachi.mp3", name: "Y_[15-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-08]_hanasu1.mp3", name: "Y_[15-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-09]_hanasu2.mp3", name: "Y_[15-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-10]_kaiwa1.mp3", name: "Y_[15-10]_kaiwa1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-11]_kaiwa2.mp3", name: "Y_[15-11]_kaiwa2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-12]_kaiwa3.mp3", name: "Y_[15-12]_kaiwa3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-13]_katachi.mp3", name: "Y_[15-13]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-14]_kiku1.mp3", name: "Y_[15-14]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-15]_kiku2.mp3", name: "Y_[15-15]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-16]_kiku3.mp3", name: "Y_[15-16]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-17]_kiku4.mp3", name: "Y_[15-17]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/15/Y_[15-18]_katachi.mp3", name: "Y_[15-18]_katachi.mp3"},
+  ],
+  "elem1_16": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-01]_kotoba1.mp3", name: "Y_[16-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-02]_kotoba2.mp3", name: "Y_[16-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-03]_kiku1.mp3", name: "Y_[16-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-04]_kiku2.mp3", name: "Y_[16-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-05]_kiku3.mp3", name: "Y_[16-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-06]_kiku4.mp3", name: "Y_[16-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-07]_katachi.mp3", name: "Y_[16-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-08]_hanasu1.mp3", name: "Y_[16-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-09]_hanasu2.mp3", name: "Y_[16-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-10]_kotoba1.mp3", name: "Y_[16-10]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-11]_kotoba2.mp3", name: "Y_[16-11]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-12]_kiku1.mp3", name: "Y_[16-12]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-13]_kiku2.mp3", name: "Y_[16-13]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-14]_kiku3.mp3", name: "Y_[16-14]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-15]_kiku4.mp3", name: "Y_[16-15]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-16]_katachi.mp3", name: "Y_[16-16]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-17]_hanasu1.mp3", name: "Y_[16-17]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-18]_hanasu2.mp3", name: "Y_[16-18]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-19]_hanasu3.mp3", name: "Y_[16-19]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/16/Y_[16-20]_kiku.mp3", name: "Y_[16-20]_kiku.mp3"},
+  ],
+  "elem1_17": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-01]_kaiwa.mp3", name: "Y_[17-01]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-02]_hanasu1.mp3", name: "Y_[17-02]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-03]_hanasu2.mp3", name: "Y_[17-03]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-04]_hanasu3.mp3", name: "Y_[17-04]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-05]_kotoba1.mp3", name: "Y_[17-05]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-06]_kotoba2.mp3", name: "Y_[17-06]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-07]_kiku1.mp3", name: "Y_[17-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-08]_kiku2.mp3", name: "Y_[17-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-09]_kiku3.mp3", name: "Y_[17-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-10]_kiku4.mp3", name: "Y_[17-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-11]_katachi.mp3", name: "Y_[17-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-12]_hanasu.mp3", name: "Y_[17-12]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-13]_kiku1.mp3", name: "Y_[17-13]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-14]_kiku2.mp3", name: "Y_[17-14]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-15]_kiku3.mp3", name: "Y_[17-15]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-16]_kiku4.mp3", name: "Y_[17-16]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-17]_katachi1.mp3", name: "Y_[17-17]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-18]_katachi2-1.mp3", name: "Y_[17-18]_katachi2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-19]_katachi2-2.mp3", name: "Y_[17-19]_katachi2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-20]_hanasu1.mp3", name: "Y_[17-20]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-21]_hanasu2.mp3", name: "Y_[17-21]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/17/Y_[17-22]_hanasu3.mp3", name: "Y_[17-22]_hanasu3.mp3"},
+  ],
+  "elem1_18": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-01]_kiku1.mp3", name: "Y_[18-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-02]_kiku2.mp3", name: "Y_[18-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-03]_kiku3.mp3", name: "Y_[18-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-04]_kiku4.mp3", name: "Y_[18-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-05]_katachi.mp3", name: "Y_[18-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-06]_hanasu1.mp3", name: "Y_[18-06]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-07]_hanasu2.mp3", name: "Y_[18-07]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-08]_kotoba1.mp3", name: "Y_[18-08]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-09]_kotoba2.mp3", name: "Y_[18-09]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-10]_kaiwa.mp3", name: "Y_[18-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-11]_katachi.mp3", name: "Y_[18-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-12]_hanasu.mp3", name: "Y_[18-12]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-13]_kaiwa.mp3", name: "Y_[18-13]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary01/audio/18/Y_[18-14]_hanasu.mp3", name: "Y_[18-14]_hanasu.mp3"},
+  ],
+  "elem2_01": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-01]_kiku1.mp3", name: "Z_[01-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-02]_kiku2.mp3", name: "Z_[01-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-03]_kiku3.mp3", name: "Z_[01-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-04]_kiku4.mp3", name: "Z_[01-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-05]_kaiwa.mp3", name: "Z_[01-05]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-06]_katachi.mp3", name: "Z_[01-06]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-07]_hanasu.mp3", name: "Z_[01-07]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-08]_kotoba1.mp3", name: "Z_[01-08]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-09]_kotoba2.mp3", name: "Z_[01-09]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-10]_kiku1.mp3", name: "Z_[01-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-11]_kiku2.mp3", name: "Z_[01-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-12]_kiku3.mp3", name: "Z_[01-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-13]_kiku4.mp3", name: "Z_[01-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-14]_katachi1.mp3", name: "Z_[01-14]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-15]_katachi2.mp3", name: "Z_[01-15]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/01/Z_[01-16]_hanasu.mp3", name: "Z_[01-16]_hanasu.mp3"},
+  ],
+  "elem2_02": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-01]_kotoba1.mp3", name: "Z_[02-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-02]_kotoba2.mp3", name: "Z_[02-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-03]_kiku1.mp3", name: "Z_[02-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-04]_kiku2.mp3", name: "Z_[02-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-05]_kiku3.mp3", name: "Z_[02-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-06]_kiku4.mp3", name: "Z_[02-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-07]_katachi1.mp3", name: "Z_[02-07]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-08]_katachi2.mp3", name: "Z_[02-08]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-09]_hanasu1.mp3", name: "Z_[02-09]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-10]_hanasu2.mp3", name: "Z_[02-10]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-11]_kiku1.mp3", name: "Z_[02-11]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-12]_kiku2.mp3", name: "Z_[02-12]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-13]_kiku3.mp3", name: "Z_[02-13]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-14]_kiku4.mp3", name: "Z_[02-14]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-15]_katachi.mp3", name: "Z_[02-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-16]_hanasu1.mp3", name: "Z_[02-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-17]_hanasu2.mp3", name: "Z_[02-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-18]_kaiwa.mp3", name: "Z_[02-18]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-19]_katachi.mp3", name: "Z_[02-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/02/Z_[02-20]_hanasu.mp3", name: "Z_[02-20]_hanasu.mp3"},
+  ],
+  "elem2_03": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-01]_kotoba1.mp3", name: "Z_[03-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-02]_kotoba2.mp3", name: "Z_[03-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-03]_kiku1.mp3", name: "Z_[03-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-04]_kiku2.mp3", name: "Z_[03-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-05]_kiku3.mp3", name: "Z_[03-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-06]_kiku4.mp3", name: "Z_[03-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-07]_kiku5.mp3", name: "Z_[03-07]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-08]_katachi.mp3", name: "Z_[03-08]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-09]_hanasu1-1.mp3", name: "Z_[03-09]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-10]_hanasu1-2.mp3", name: "Z_[03-10]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-11]_hanasu2-1.mp3", name: "Z_[03-11]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-12]_hanasu2-2.mp3", name: "Z_[03-12]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-13]_kotoba.mp3", name: "Z_[03-13]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-14]_kaiwa.mp3", name: "Z_[03-14]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-15]_katachi.mp3", name: "Z_[03-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-16]_hanasu1.mp3", name: "Z_[03-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-17]_hanasu2.mp3", name: "Z_[03-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-18]_hanasu3.mp3", name: "Z_[03-18]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-19]_kaiwa.mp3", name: "Z_[03-19]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/03/Z_[03-20]_hanasu.mp3", name: "Z_[03-20]_hanasu.mp3"},
+  ],
+  "elem2_04": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-01]_kiku1.mp3", name: "Z_[04-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-02]_kiku2.mp3", name: "Z_[04-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-03]_kiku3.mp3", name: "Z_[04-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-04]_kiku4.mp3", name: "Z_[04-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-05]_katachi.mp3", name: "Z_[04-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-06]_kotoba1.mp3", name: "Z_[04-06]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-07]_kotoba2.mp3", name: "Z_[04-07]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-08]_kiku1.mp3", name: "Z_[04-08]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-09]_kiku2.mp3", name: "Z_[04-09]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-10]_kiku3.mp3", name: "Z_[04-10]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-11]_kiku4.mp3", name: "Z_[04-11]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-12]_kiku5.mp3", name: "Z_[04-12]_kiku5.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-13]_kiku6.mp3", name: "Z_[04-13]_kiku6.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-14]_kiku7.mp3", name: "Z_[04-14]_kiku7.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-15]_katachi.mp3", name: "Z_[04-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-16]_kaiwa.mp3", name: "Z_[04-16]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-17]_katachi.mp3", name: "Z_[04-17]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-18]_hanasu1-1.mp3", name: "Z_[04-18]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-19]_hanasu1-2.mp3", name: "Z_[04-19]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-20]_hanasu2.mp3", name: "Z_[04-20]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-21]_hanasu3.mp3", name: "Z_[04-21]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-22]_kotoba1-1.mp3", name: "Z_[04-22]_kotoba1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-23]_kotoba1-2.mp3", name: "Z_[04-23]_kotoba1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-24]_kotoba2-1.mp3", name: "Z_[04-24]_kotoba2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-25]_kotoba2-2.mp3", name: "Z_[04-25]_kotoba2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-26]_kiku1.mp3", name: "Z_[04-26]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-27]_kiku2.mp3", name: "Z_[04-27]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-28]_kiku3.mp3", name: "Z_[04-28]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-29]_kiku4.mp3", name: "Z_[04-29]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/04/Z_[04-30]_hanasu.mp3", name: "Z_[04-30]_hanasu.mp3"},
+  ],
+  "elem2_05": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-01]_kotoba1.mp3", name: "Z_[05-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-02]_kotoba2.mp3", name: "Z_[05-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-03]_kiku1.mp3", name: "Z_[05-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-04]_kiku2.mp3", name: "Z_[05-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-05]_kiku3.mp3", name: "Z_[05-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-06]_kiku4.mp3", name: "Z_[05-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-07]_katachi.mp3", name: "Z_[05-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-08]_kaiwa.mp3", name: "Z_[05-08]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-09]_katachi.mp3", name: "Z_[05-09]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-10]_hanasu1.mp3", name: "Z_[05-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-11]_hanasu2.mp3", name: "Z_[05-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-12]_hanasu3.mp3", name: "Z_[05-12]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-13]_kotoba1.mp3", name: "Z_[05-13]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-14]_kotoba2.mp3", name: "Z_[05-14]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-15]_kiku1.mp3", name: "Z_[05-15]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-16]_kiku2.mp3", name: "Z_[05-16]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-17]_kiku3.mp3", name: "Z_[05-17]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-18]_kiku4.mp3", name: "Z_[05-18]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-19]_katachi.mp3", name: "Z_[05-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-20]_hanasu1.mp3", name: "Z_[05-20]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-21]_hanasu2.mp3", name: "Z_[05-21]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/05/Z_[05-22]_hanasu3.mp3", name: "Z_[05-22]_hanasu3.mp3"},
+  ],
+  "elem2_06": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-01]_kaiwa.mp3", name: "Z_[06-01]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-02]_katachi.mp3", name: "Z_[06-02]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-03]_hanasu.mp3", name: "Z_[06-03]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-04]_kotoba.mp3", name: "Z_[06-04]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-05]_kiku1.mp3", name: "Z_[06-05]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-06]_kiku2.mp3", name: "Z_[06-06]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-07]_kiku1.mp3", name: "Z_[06-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-08]_kiku2.mp3", name: "Z_[06-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-09]_kotoba.mp3", name: "Z_[06-09]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-10]_kiku1.mp3", name: "Z_[06-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-11]_kiku2.mp3", name: "Z_[06-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-12]_kiku3.mp3", name: "Z_[06-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-13]_kiku4.mp3", name: "Z_[06-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-14]_katachi1.mp3", name: "Z_[06-14]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-15]_katachi2.mp3", name: "Z_[06-15]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-16]_hanasu1.mp3", name: "Z_[06-16]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-17]_hanasu2.mp3", name: "Z_[06-17]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/06/Z_[06-18]_hanasu3.mp3", name: "Z_[06-18]_hanasu3.mp3"},
+  ],
+  "elem2_07": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-01]_kiku1.mp3", name: "Z_[07-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-02]_kiku2.mp3", name: "Z_[07-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-03]_kiku3.mp3", name: "Z_[07-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-04]_kiku4.mp3", name: "Z_[07-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-05]_katachi.mp3", name: "Z_[07-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-06]_kiku1.mp3", name: "Z_[07-06]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-07]_kiku2.mp3", name: "Z_[07-07]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-08]_kiku3.mp3", name: "Z_[07-08]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-09]_kiku4.mp3", name: "Z_[07-09]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-10]_katachi.mp3", name: "Z_[07-10]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-11]_kaiwa.mp3", name: "Z_[07-11]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-12]_katachi.mp3", name: "Z_[07-12]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-13]_hanasu1.mp3", name: "Z_[07-13]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-14]_hanasu2.mp3", name: "Z_[07-14]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/07/Z_[07-15]_hanasu3.mp3", name: "Z_[07-15]_hanasu3.mp3"},
+  ],
+  "elem2_08": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-01]_kotoba1.mp3", name: "Z_[08-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-02]_kotoba2.mp3", name: "Z_[08-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-03]_kiku1.mp3", name: "Z_[08-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-04]_kiku2.mp3", name: "Z_[08-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-05]_kiku3.mp3", name: "Z_[08-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-06]_kiku4.mp3", name: "Z_[08-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-07]_katachi1.mp3", name: "Z_[08-07]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-08]_katachi2.mp3", name: "Z_[08-08]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-09]_hanasu1-1.mp3", name: "Z_[08-09]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-10]_hanasu1-2.mp3", name: "Z_[08-10]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-11]_hanasu1-3.mp3", name: "Z_[08-11]_hanasu1-3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-12]_hanasu1-4.mp3", name: "Z_[08-12]_hanasu1-4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-13]_hanasu2.mp3", name: "Z_[08-13]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-14]_kaiwa.mp3", name: "Z_[08-14]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-15]_hanasu1.mp3", name: "Z_[08-15]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-16]_hanasu2-1.mp3", name: "Z_[08-16]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-17]_hanasu2-2.mp3", name: "Z_[08-17]_hanasu2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-18]_hanasu3.mp3", name: "Z_[08-18]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-19]_hanasu4.mp3", name: "Z_[08-19]_hanasu4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-20]_kiku1.mp3", name: "Z_[08-20]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-21]_kiku2.mp3", name: "Z_[08-21]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-22]_kiku3.mp3", name: "Z_[08-22]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/08/Z_[08-23]_kiku4.mp3", name: "Z_[08-23]_kiku4.mp3"},
+  ],
+  "elem2_09": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-01]_kotoba1.mp3", name: "Z_[09-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-02]_kotoba2.mp3", name: "Z_[09-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-03]_kiku1.mp3", name: "Z_[09-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-04]_kiku2.mp3", name: "Z_[09-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-05]_kiku3.mp3", name: "Z_[09-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-06]_kiku4.mp3", name: "Z_[09-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-07]_katachi.mp3", name: "Z_[09-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-08]_kaiwa.mp3", name: "Z_[09-08]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-09]_katachi1.mp3", name: "Z_[09-09]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-10]_katachi2.mp3", name: "Z_[09-10]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-11]_hanasu1.mp3", name: "Z_[09-11]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-12]_hanasu2.mp3", name: "Z_[09-12]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-13]_kotoba1.mp3", name: "Z_[09-13]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-14]_kotoba2.mp3", name: "Z_[09-14]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-15]_kiku1.mp3", name: "Z_[09-15]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-16]_kiku2.mp3", name: "Z_[09-16]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-17]_kiku3.mp3", name: "Z_[09-17]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-18]_kiku4.mp3", name: "Z_[09-18]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-19]_katachi.mp3", name: "Z_[09-19]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/09/Z_[09-20]_hanasu.mp3", name: "Z_[09-20]_hanasu.mp3"},
+  ],
+  "elem2_10": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-01]_kiku1.mp3", name: "Z_[10-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-02]_kiku2.mp3", name: "Z_[10-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-03]_kiku3.mp3", name: "Z_[10-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-04]_kiku4.mp3", name: "Z_[10-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-05]_katachi.mp3", name: "Z_[10-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-06]_hanasu1.mp3", name: "Z_[10-06]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-07]_hanasu2.mp3", name: "Z_[10-07]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-08]_kiku1.mp3", name: "Z_[10-08]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-09]_kiku2.mp3", name: "Z_[10-09]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-10]_kiku3.mp3", name: "Z_[10-10]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-11]_kiku4.mp3", name: "Z_[10-11]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-12]_katachi1.mp3", name: "Z_[10-12]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-13]_katachi2.mp3", name: "Z_[10-13]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-14]_hanasu.mp3", name: "Z_[10-14]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-15]_kaiwa.mp3", name: "Z_[10-15]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-16]_katachi1.mp3", name: "Z_[10-16]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-17]_katachi2.mp3", name: "Z_[10-17]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/10/Z_[10-18]_hanasu.mp3", name: "Z_[10-18]_hanasu.mp3"},
+  ],
+  "elem2_11": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-01]_kotoba1.mp3", name: "Z_[11-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-02]_kotoba2.mp3", name: "Z_[11-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-03]_kaiwa.mp3", name: "Z_[11-03]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-04]_katachi.mp3", name: "Z_[11-04]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-05]_hanasu1.mp3", name: "Z_[11-05]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-06]_hanasu2.mp3", name: "Z_[11-06]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-07]_hanasu3.mp3", name: "Z_[11-07]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-08]_kotoba1.mp3", name: "Z_[11-08]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-09]_kotoba2.mp3", name: "Z_[11-09]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-10]_kiku1.mp3", name: "Z_[11-10]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-11]_kiku2.mp3", name: "Z_[11-11]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-12]_kiku3.mp3", name: "Z_[11-12]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-13]_kiku4.mp3", name: "Z_[11-13]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-14]_katachi1.mp3", name: "Z_[11-14]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-15]_katachi2.mp3", name: "Z_[11-15]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-16]_katachi3.mp3", name: "Z_[11-16]_katachi3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-17]_hanasu1.mp3", name: "Z_[11-17]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-18]_hanasu2.mp3", name: "Z_[11-18]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-19]_hanasu3.mp3", name: "Z_[11-19]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-20]_kaiwa.mp3", name: "Z_[11-20]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-21]_hanasu.mp3", name: "Z_[11-21]_hanasu.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-22]_kiku1.mp3", name: "Z_[11-22]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-23]_kiku2.mp3", name: "Z_[11-23]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-24]_kiku3.mp3", name: "Z_[11-24]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/11/Z_[11-25]_kiku4.mp3", name: "Z_[11-25]_kiku4.mp3"},
+  ],
+  "elem2_12": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-01]_kotoba1.mp3", name: "Z_[12-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-02]_kotoba2.mp3", name: "Z_[12-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-03]_kiku1.mp3", name: "Z_[12-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-04]_kiku2.mp3", name: "Z_[12-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-05]_kiku3.mp3", name: "Z_[12-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-06]_kiku4.mp3", name: "Z_[12-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-07]_katachi.mp3", name: "Z_[12-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-08]_hanasu1.mp3", name: "Z_[12-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-09]_hanasu2.mp3", name: "Z_[12-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-10]_kaiwa.mp3", name: "Z_[12-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-11]_katachi1.mp3", name: "Z_[12-11]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-12]_katachi2.mp3", name: "Z_[12-12]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/12/Z_[12-13]_hanasu.mp3", name: "Z_[12-13]_hanasu.mp3"},
+  ],
+  "elem2_13": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-01]_kotoba1.mp3", name: "Z_[13-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-02]_kotoba2.mp3", name: "Z_[13-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-03]_kiku.mp3", name: "Z_[13-03]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-04]_katachi1.mp3", name: "Z_[13-04]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-05]_katachi2.mp3", name: "Z_[13-05]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-06]_katachi3.mp3", name: "Z_[13-06]_katachi3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-07]_kiku1.mp3", name: "Z_[13-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-08]_kiku2.mp3", name: "Z_[13-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-09]_kiku3.mp3", name: "Z_[13-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-10]_kiku4.mp3", name: "Z_[13-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-11]_kaiwa.mp3", name: "Z_[13-11]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-12]_katachi.mp3", name: "Z_[13-12]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-13]_hanasu1.mp3", name: "Z_[13-13]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-14]_hanasu2.mp3", name: "Z_[13-14]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/13/Z_[13-15]_hanasu3.mp3", name: "Z_[13-15]_hanasu3.mp3"},
+  ],
+  "elem2_14": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-01]_kotoba.mp3", name: "Z_[14-01]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-02]_kiku1.mp3", name: "Z_[14-02]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-03]_kiku2.mp3", name: "Z_[14-03]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-04]_kiku3.mp3", name: "Z_[14-04]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-05]_kiku4.mp3", name: "Z_[14-05]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-06]_kaiwa1.mp3", name: "Z_[14-06]_kaiwa1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-07]_kaiwa2.mp3", name: "Z_[14-07]_kaiwa2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-08]_katachi.mp3", name: "Z_[14-08]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-09]_hanasu1-1.mp3", name: "Z_[14-09]_hanasu1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-10]_hanasu1-2.mp3", name: "Z_[14-10]_hanasu1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-11]_hanasu2.mp3", name: "Z_[14-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-12]_kotoba.mp3", name: "Z_[14-12]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-13]_kiku.mp3", name: "Z_[14-13]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/14/Z_[14-14]_katachi.mp3", name: "Z_[14-14]_katachi.mp3"},
+  ],
+  "elem2_15": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-01]_kotoba1.mp3", name: "Z_[15-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-02]_kotoba2.mp3", name: "Z_[15-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-03]_kiku1.mp3", name: "Z_[15-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-04]_kiku2.mp3", name: "Z_[15-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-05]_kiku3.mp3", name: "Z_[15-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-06]_kiku4.mp3", name: "Z_[15-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-07]_katachi.mp3", name: "Z_[15-07]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-08]_hanasu1.mp3", name: "Z_[15-08]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-09]_hanasu2.mp3", name: "Z_[15-09]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-10]_kaiwa.mp3", name: "Z_[15-10]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-11]_katachi.mp3", name: "Z_[15-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-12]_hanasu1.mp3", name: "Z_[15-12]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/15/Z_[15-13]_hanasu2.mp3", name: "Z_[15-13]_hanasu2.mp3"},
+  ],
+  "elem2_16": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-01]_kotoba.mp3", name: "Z_[16-01]_kotoba.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-02]_kiku1.mp3", name: "Z_[16-02]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-03]_kiku2.mp3", name: "Z_[16-03]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-04]_kiku3.mp3", name: "Z_[16-04]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-05]_kotoba1.mp3", name: "Z_[16-05]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-06]_kotoba2.mp3", name: "Z_[16-06]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-07]_kiku1.mp3", name: "Z_[16-07]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-08]_kiku2.mp3", name: "Z_[16-08]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-09]_kiku3.mp3", name: "Z_[16-09]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-10]_kiku4.mp3", name: "Z_[16-10]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-11]_katachi.mp3", name: "Z_[16-11]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-12]_kiku1.mp3", name: "Z_[16-12]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-13]_kiku2.mp3", name: "Z_[16-13]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-14]_kiku12.mp3", name: "Z_[16-14]_kiku12.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-15]_katachi.mp3", name: "Z_[16-15]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-16]_kotoba1-1.mp3", name: "Z_[16-16]_kotoba1-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-17]_kotoba1-2.mp3", name: "Z_[16-17]_kotoba1-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-18]_kotoba2-1.mp3", name: "Z_[16-18]_kotoba2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-19]_kotoba2-2.mp3", name: "Z_[16-19]_kotoba2-2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-20]_kiku1.mp3", name: "Z_[16-20]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-21]_kiku2.mp3", name: "Z_[16-21]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-22]_kiku3.mp3", name: "Z_[16-22]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-23]_kiku4.mp3", name: "Z_[16-23]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-24]_katachi.mp3", name: "Z_[16-24]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-25]_hanasu1.mp3", name: "Z_[16-25]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-26]_hanasu2-1.mp3", name: "Z_[16-26]_hanasu2-1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/16/Z_[16-27]_hanasu2-2.mp3", name: "Z_[16-27]_hanasu2-2.mp3"},
+  ],
+  "elem2_17": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-01]_kiku1.mp3", name: "Z_[17-01]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-02]_kiku2.mp3", name: "Z_[17-02]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-03]_kiku3.mp3", name: "Z_[17-03]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-04]_kiku4.mp3", name: "Z_[17-04]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-05]_katachi.mp3", name: "Z_[17-05]_katachi.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-06]_hanasu1.mp3", name: "Z_[17-06]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-07]_hanasu2.mp3", name: "Z_[17-07]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-08]_hanasu3.mp3", name: "Z_[17-08]_hanasu3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-09]_kaiwa.mp3", name: "Z_[17-09]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-10]_hanasu1.mp3", name: "Z_[17-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/17/Z_[17-11]_hanasu2.mp3", name: "Z_[17-11]_hanasu2.mp3"},
+  ],
+  "elem2_18": [
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-01]_kotoba1.mp3", name: "Z_[18-01]_kotoba1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-02]_kotoba2.mp3", name: "Z_[18-02]_kotoba2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-03]_kiku1.mp3", name: "Z_[18-03]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-04]_kiku2.mp3", name: "Z_[18-04]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-05]_kiku3.mp3", name: "Z_[18-05]_kiku3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-06]_kiku4.mp3", name: "Z_[18-06]_kiku4.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-07]_katachi1.mp3", name: "Z_[18-07]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-08]_katachi2.mp3", name: "Z_[18-08]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-09]_katachi3.mp3", name: "Z_[18-09]_katachi3.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-10]_hanasu1.mp3", name: "Z_[18-10]_hanasu1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-11]_hanasu2.mp3", name: "Z_[18-11]_hanasu2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-12]_kiku.mp3", name: "Z_[18-12]_kiku.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-13]_kiku1.mp3", name: "Z_[18-13]_kiku1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-14]_kiku2.mp3", name: "Z_[18-14]_kiku2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-15]_kaiwa.mp3", name: "Z_[18-15]_kaiwa.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-16]_katachi1.mp3", name: "Z_[18-16]_katachi1.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-17]_katachi2.mp3", name: "Z_[18-17]_katachi2.mp3"},
+    {url: "https://www.irodori.jpf.go.jp/assets/data/elementary02/audio/18/Z_[18-18]_hanasu.mp3", name: "Z_[18-18]_hanasu.mp3"},
+  ],
+};
+
+    const levels = {
+      starter: { start: 1, end: 18 },
+      elem1: { start: 1, end: 18 },
+      elem2: { start: 1, end: 18 }
+    };
+
+    // ---- SECTION CONFIG ----
+    const SECTION_CONFIG = {
+      kyoshitsu: { label: 'KYOSHITSU', color: '#dc2626' },
+      kiku:      { label: 'KIKU',      color: '#2563eb' },
+      hanasu:    { label: 'HANASU',    color: '#16a34a' },
+      katachi:   { label: 'KATACHI',   color: '#ca8a04' },
+      kotoba:    { label: 'KOTOBA',    color: '#ea580c' },
+      kaiwa:     { label: 'KAIWA',     color: '#7c3aed' },
+      hiragana:  { label: 'HIRAGANA',  color: '#b45309' },
+      katakana:  { label: 'KATAKANA',  color: '#64748b' },
+      yomu:      { label: 'YOMU',      color: '#be185d' },
+      other:     { label: 'LAINNYA',   color: '#475569' }
+    };
+
+    const SWATCHES = [
+      '#1a2332','#334155','#475569','#b91c1c','#dc2626','#ea580c',
+      '#ca8a04','#16a34a','#0d9488','#0284c7','#2563eb','#7c3aed',
+      '#c026d3','#db2777','#ffffff','#e2e8f0'
+    ];
+
+    let currentLevel = 'starter';
+    let currentLesson = 1;
+    let editMode = false;
+    let insertIndex = 0;
+    let editingHeadingIndex = -1;
+    let selectedHeadingColor = '#334155';
+
+    // ---------- Helpers ----------
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function extractRaw(filename) {
+      if (!filename) return '';
+      const m = filename.match(/_([a-zA-Z0-9_\- ]+)\.mp3$/i);
+      return m ? m[1].trim() : filename.replace(/\.mp3$/i, '');
+    }
+
+    function extractSection(raw) {
+      const m = raw.match(/^([a-z]+)/i);
+      return m ? m[1].toLowerCase() : 'other';
+    }
+
+    function prettyName(raw) {
+      let s = raw.replace(/_/g, ' ');
+      s = s.replace(/([a-zA-Z])(\d)/g, '$1 $2');
+      s = s.replace(/\b[a-z]/g, c => c.toUpperCase());
+      return s;
+    }
+
+    function darken(hex, amount) {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      const nr = Math.round(r * (1 - amount));
+      const ng = Math.round(g * (1 - amount));
+      const nb = Math.round(b * (1 - amount));
+      return '#' + [nr, ng, nb].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ---------- Storage ----------
+
+    function storageKey(level, lesson) {
+      return 'irodori_custom_' + level + '_' + pad(lesson);
+    }
+
+    function loadCustom(level, lesson) {
+      try {
+        const raw = localStorage.getItem(storageKey(level, lesson));
+        return raw ? JSON.parse(raw) : null;
+      } catch(e) { return null; }
+    }
+
+    function saveCustom(level, lesson, items) {
+      localStorage.setItem(storageKey(level, lesson), JSON.stringify(items));
+    }
+
+    function isLight(hex) {
+      if (!hex || hex.length < 7) return false;
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      return (r*0.299 + g*0.587 + b*0.114) > 160;
+    }
+
+    // ---------- Build display items (auto-section) ----------
+
+    function buildDisplayItems() {
+      const key = currentLevel + '_' + pad(currentLesson);
+      const tracks = AUDIO_DATA[key] || [];
+      const saved = loadCustom(currentLevel, currentLesson);
+      if (saved && Array.isArray(saved)) return saved;
+      if (!tracks.length) return [];
+
+      // Pre-scan: hitung berapa blok tiap section
+      const blockCount = {};
+      let prev = null;
+      tracks.forEach(t => {
+        const s = extractSection(extractRaw(t.name));
+        if (s !== prev) blockCount[s] = (blockCount[s] || 0) + 1;
+        prev = s;
+      });
+
+      const items = [];
+      let currentSection = null;
+      const blockNum = {};
+      const itemNum = {};
+
+      tracks.forEach(t => {
+        const raw = extractRaw(t.name);
+        const section = extractSection(raw);
+        const conf = SECTION_CONFIG[section] || SECTION_CONFIG.other;
+
+        // Section baru → tambah H1 header
+        if (section !== currentSection) {
+          blockNum[section] = (blockNum[section] || 0) + 1;
+          const n = blockNum[section];
+          const label = blockCount[section] > 1 ? conf.label + ' ' + n : conf.label;
+          items.push({ type: 'h1', text: label, color: conf.color });
+          currentSection = section;
+          itemNum[section] = 0;
+        }
+
+        const idx = itemNum[section]++;
+        const bgColor = (idx % 2 === 0) ? conf.color : darken(conf.color, 0.5);
+
+        items.push({
+  type: 'track',
+  url: t.url,
+  name: t.name, // <--- Ubah jadi t.name
+  color: bgColor
+});
+      });
+
+      return items;
+    }
+
+    function getItems() { return buildDisplayItems(); }
+
+    // ---------- Render ----------
+
+    function renderLessons() {
+      const conf = levels[currentLevel];
+      const wrap = document.getElementById('lessons');
+      wrap.className = 'lessons-wrap ' + currentLevel;
+      wrap.innerHTML = '';
+      for (let i = conf.start; i <= conf.end; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'lesson-btn' + (i === currentLesson ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick = () => selectLesson(i);
+        wrap.appendChild(btn);
+      }
+    }
+
+    function selectLesson(num) {
+      currentLesson = num;
+      renderLessons();
+      renderList();
+    }
+
+    function setLevel(level) {
+      currentLevel = level;
+      currentLesson = levels[level].start;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.tab.' + level).classList.add('active');
+      renderLessons();
+      renderList();
+    }
+
+    function toggleEdit() {
+      editMode = !editMode;
+      document.body.classList.toggle('edit-mode', editMode);
+      const btn = document.getElementById('btnSettings');
+      const label = document.getElementById('modeLabel');
+      if (editMode) {
+        btn.classList.add('edit');
+        btn.textContent = '✓ Selesai';
+        label.textContent = 'Mode: Pengaturan (bisa tambah judul + warna)';
+      } else {
+        btn.classList.remove('edit');
+        btn.textContent = '⚙ Pengaturan';
+        label.textContent = 'Mode: Ngajar (baca saja)';
+      }
+      renderList();
+    }
+
+    function buildSwatches(containerId, selected, onSelect) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = '';
+      SWATCHES.forEach(c => {
+        const s = document.createElement('div');
+        s.className = 'swatch' + (c.toLowerCase() === (selected||'').toLowerCase() ? ' selected' : '');
+        s.style.background = c;
+        if (c === '#ffffff' || c === '#e2e8f0') s.style.border = '1px solid #94a3b8';
+        s.onclick = () => onSelect(c);
+        el.appendChild(s);
+      });
+    }
+
+    function updatePreview(which, color) {
+      const preview = document.getElementById(which === 'heading' ? 'hColorPreview' : 'sectionColorPreview');
+      const input = document.getElementById(which === 'heading' ? 'hColorCustom' : 'sectionColorCustom');
+      preview.style.background = color;
+      preview.style.color = isLight(color) ? '#111' : '#fff';
+      input.value = color;
+    }
+
+    function onCustomColor(which) {
+      const input = document.getElementById(which === 'heading' ? 'hColorCustom' : 'sectionColorCustom');
+      selectedHeadingColor = input.value;
+      updatePreview(which, selectedHeadingColor);
+      const container = which === 'heading' ? 'headingSwatches' : 'sectionSwatches';
+      buildSwatches(container, null, function(c) {
+        selectedHeadingColor = c;
+        updatePreview(which, c);
+        buildSwatches(container, c, arguments.callee);
+      });
+    }
+
+    function openModal(index) {
+      insertIndex = index;
+      selectedHeadingColor = '#334155';
+      document.getElementById('hText').value = '';
+      document.getElementById('hType').value = 'h1';
+      updatePreview('heading', selectedHeadingColor);
+      buildSwatches('headingSwatches', selectedHeadingColor, function(c) {
+        selectedHeadingColor = c;
+        updatePreview('heading', c);
+        buildSwatches('headingSwatches', c, arguments.callee);
+      });
+      document.getElementById('modal').classList.add('show');
+      setTimeout(() => document.getElementById('hText').focus(), 100);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+    }
+
+    function confirmHeading() {
+      const type = document.getElementById('hType').value;
+      const text = document.getElementById('hText').value.trim();
+      if (!text) { alert('Judul belum diisi'); return; }
+      selectedHeadingColor = document.getElementById('hColorCustom').value || selectedHeadingColor;
+      const items = getItems();
+      items.splice(insertIndex, 0, { type, text, color: selectedHeadingColor });
+      saveCustom(currentLevel, currentLesson, items);
+      closeModal();
+      renderList();
+    }
+
+    function deleteHeading(index) {
+      if (!confirm('Hapus judul ini?')) return;
+      const items = getItems();
+      items.splice(index, 1);
+      saveCustom(currentLevel, currentLesson, items);
+      renderList();
+    }
+
+    function openSectionColor(index) {
+      editingHeadingIndex = index;
+      const items = getItems();
+      const item = items[index];
+      const color = item.color || '#334155';
+      selectedHeadingColor = color;
+      document.getElementById('sectionColorLabel').textContent = item.text || '';
+      updatePreview('section', color);
+      buildSwatches('sectionSwatches', color, function(c) {
+        selectedHeadingColor = c;
+        updatePreview('section', c);
+        buildSwatches('sectionSwatches', c, arguments.callee);
+      });
+      document.getElementById('modalSectionColor').classList.add('show');
+    }
+
+    function closeSectionColor() {
+      document.getElementById('modalSectionColor').classList.remove('show');
+      editingHeadingIndex = -1;
+    }
+
+    function saveSectionColor() {
+      const color = document.getElementById('sectionColorCustom').value || selectedHeadingColor;
+      const items = getItems();
+      if (editingHeadingIndex >= 0 && items[editingHeadingIndex]) {
+        items[editingHeadingIndex].color = color;
+        // Update tracks di bawah heading ini sampai heading berikutnya
+        let altIdx = 0;
+        for (let i = editingHeadingIndex + 1; i < items.length; i++) {
+          if (items[i].type === 'h1' || items[i].type === 'h2') break;
+          if (items[i].type === 'track') {
+            items[i].color = (altIdx % 2 === 0) ? color : darken(color, 0.5);
+            altIdx++;
+          }
+        }
+        saveCustom(currentLevel, currentLesson, items);
+      }
+      closeSectionColor();
+      renderList();
+    }
+
+    function renderList() {
+      const items = buildDisplayItems();
+      const list = document.getElementById('list');
+      if (!items.length) {
+        list.innerHTML = '<div class="empty">Tidak ada audio</div>';
+        return;
+      }
+
+      let html = '';
+      html += '<div class="insert-row"><button class="insert-btn" onclick="openModal(0)">+ Heading 1 / 2</button></div>';
+
+      let currentColor = '#1a2332';
+
+      items.forEach((item, i) => {
+        if (item.type === 'h1' || item.type === 'h2') {
+          currentColor = item.color || '#1a2332';
+          const textColor = isLight(currentColor) ? '#111' : '#fff';
+          const style = 'background:' + currentColor + ';color:' + textColor + ';border-left:4px solid rgba(0,0,0,0.35)';
+          html += '<div class="heading ' + item.type + '" style="' + style + '">' +
+            '<span class="heading-text">' + item.text + '</span>' +
+            '<div class="color-dot" style="background:' + currentColor + '" onclick="openSectionColor(' + i + ')" title="Ubah warna"></div>' +
+            '<button class="del-btn" onclick="deleteHeading(' + i + ')">✕</button></div>' +
+            '<div class="insert-row"><button class="insert-btn" onclick="openModal(' + (i+1) + ')">+ Heading 1 / 2</button></div>';
+        } else {
+          const bgColor = item.color || currentColor;
+          const nameColor = isLight(bgColor) ? '#111' : '#e7ecf3';
+          const borderColor = darken(bgColor, 0.7);
+          html += '<div class="track" style="background:' + bgColor + ';border-color:' + borderColor + '">' +
+            '<div class="track-name" style="color:' + nameColor + '">' + item.name + '</div>' +
+            '<audio controls preload="none" src="' + item.url + '"></audio></div>' +
+            '<div class="insert-row"><button class="insert-btn" onclick="openModal(' + (i+1) + ')">+ Heading 1 / 2</button></div>';
+        }
+      });
+
+      list.innerHTML = html;
+    }
+
+    // ---------- Export / Import ----------
+
+    function exportJSON() {
+      const all = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('irodori_custom_')) {
+          try { all[k.replace('irodori_custom_', '')] = JSON.parse(localStorage.getItem(k)); }
+          catch(e) {}
+        }
+      }
+      if (Object.keys(all).length === 0) { alert('Belum ada pengaturan yang disimpan.'); return; }
+      const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'irodori-settings.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function openImport() {
+      document.getElementById('importText').value = '';
+      document.getElementById('modalImport').classList.add('show');
+    }
+
+    function closeImport() { document.getElementById('modalImport').classList.remove('show'); }
+
+    function doImport() {
+      const raw = document.getElementById('importText').value.trim();
+      if (!raw) { alert('JSON kosong'); return; }
+      let data;
+      try { data = JSON.parse(raw); }
+      catch(e) { alert('JSON tidak valid'); return; }
+      if (typeof data !== 'object' || Array.isArray(data)) { alert('Format JSON salah'); return; }
+      let count = 0;
+      for (const key in data) {
+        if (Array.isArray(data[key])) {
+          localStorage.setItem('irodori_custom_' + key, JSON.stringify(data[key]));
+          count++;
+        }
+      }
+      closeImport();
+      renderList();
+      alert('Import berhasil: ' + count + ' lesson');
+    }
+
+    function resetCurrent() {
+      if (!confirm('Reset lesson ini ke tampilan default (auto-section)?')) return;
+      localStorage.removeItem(storageKey(currentLevel, currentLesson));
+      renderList();
+    }
+
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+    document.getElementById('modalImport').addEventListener('click', function(e) {
+      if (e.target === this) closeImport();
+    });
+    document.getElementById('modalSectionColor').addEventListener('click', function(e) {
+      if (e.target === this) closeSectionColor();
+    });
+
+    renderLessons();
+    renderList();
+  </script>
+</body>
+</html>
