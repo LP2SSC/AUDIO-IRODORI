@@ -1996,6 +1996,32 @@ const AUDIO_DATA = {
       list.innerHTML = html;
     }
 
+    // ---------- FIX: Auto-pause audio lain ----------
+    (function() {
+      let currentlyPlayingAudio = null;
+
+      document.addEventListener('play', function(e) {
+        if (e.target.tagName !== 'AUDIO') return;
+        if (currentlyPlayingAudio && currentlyPlayingAudio !== e.target) {
+          currentlyPlayingAudio.pause();
+        }
+        currentlyPlayingAudio = e.target;
+      }, true);
+
+      document.addEventListener('ended', function(e) {
+        if (e.target.tagName === 'AUDIO' && e.target === currentlyPlayingAudio) {
+          currentlyPlayingAudio = null;
+        }
+      }, true);
+
+      document.addEventListener('pause', function(e) {
+        if (e.target.tagName === 'AUDIO' && e.target === currentlyPlayingAudio) {
+          currentlyPlayingAudio = null;
+        }
+      }, true);
+    })();
+    // ---------- End FIX ----------
+    
     // ---------- Export / Import ----------
 
     function exportJSON() {
